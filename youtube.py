@@ -552,7 +552,6 @@ if not st.session_state.downloaded_file:
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
-          "cookiefile": "cookies.txt",
           "js_runtimes": {"deno": {}},
           "extractor_args": {
               "youtube": {
