@@ -524,8 +524,7 @@ if not st.session_state.downloaded_file:
         mime_type = "audio/mpeg"
         target_ext = "mp3"
       else:
-        # Shorts leh regular video tin tan format 'best' hmang hian error a awm ngai tawh lo
-        ydl_format = "best"
+        ydl_format = "bestvideo+bestaudio/best"
         if "MKV" in selected_format.upper():
           mime_type = "video/x-matroska"
           target_ext = "mkv"
@@ -554,12 +553,6 @@ if not st.session_state.downloaded_file:
           "quiet": True,
           "noplaylist": True,
           "cookiefile": "cookies.txt",
-          "extractor_args": {
-              "youtube": {
-                  "player_client": ["android", "mweb", "ios", "web"],
-                  "player_skip": ["webpage", "configs"],
-              }
-          },
       }
 
       if "MP3" in selected_format.upper():
