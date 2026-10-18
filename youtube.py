@@ -553,6 +553,7 @@ if not st.session_state.downloaded_file:
           "quiet": True,
           "noplaylist": True,
           "cookiefile": "cookies.txt",
+          "js_runtimes": {"deno": {}},  # JavaScript runtime belh a ni
       }
 
       if "MP3" in selected_format.upper():
