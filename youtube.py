@@ -520,11 +520,9 @@ if not st.session_state.downloaded_file:
 
     try:
       if "MP3" in selected_format.upper():
-        ydl_format = "bestaudio/best"
         mime_type = "audio/mpeg"
         target_ext = "mp3"
       else:
-        ydl_format = "bestvideo+bestaudio/best"
         if "MKV" in selected_format.upper():
           mime_type = "video/x-matroska"
           target_ext = "mkv"
@@ -547,40 +545,50 @@ if not st.session_state.downloaded_file:
 
       target_url = url.strip()
 
-      ydl_opts = {
-          "format": ydl_format,
-          "outtmpl": outtmpl_str,
-          "quiet": True,
-          "noplaylist": True,
-          "cookiefile": "cookies.txt",
-      }
-
-      if "MP3" in selected_format.upper():
-        ydl_opts["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "192",
-        }]
-      else:
-        ydl_opts["merge_output_format"] = target_ext
-
-
       def run_dl():
         try:
-          with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+          ydl_opts_final = {
+              "format": "best/best",
+              "outtmpl": outtmpl_str,
+              "quiet": True,
+              "noplaylist": True,
+              "cookiefile": "cookies.txt",
+          }
+          if "MP3" in selected_format.upper():
+            ydl_opts_final["postprocessors"] = [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }]
+          else:
+            ydl_opts_final["merge_output_format"] = target_ext
+
+          with yt_dlp.YoutubeDL(ydl_opts_final) as ydl:
             info = ydl.extract_info(target_url, download=True)
             extracted_info[0] = info
             filename = ydl.prepare_filename(info)
             base, _ = os.path.splitext(filename)
+            
             expected_file = f"{base}.{target_ext}"
-            if os.path.exists(expected_file):
+            if os.path.exists(expected_file) and os.path.getsize(expected_file) > 0:
               filename = expected_file
+            elif os.path.exists(filename) and os.path.getsize(filename) > 0:
+              pass
+            else:
+              for ext in [target_ext, "mp4", "mkv", "webm", "mp3", "m4a"]:
+                alt_file = f"{base}.{ext}"
+                if os.path.exists(alt_file) and os.path.getsize(alt_file) > 0:
+                  filename = alt_file
+                  break
+
+            if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+              raise Exception("The downloaded file is empty")
+
             download_result[0] = filename
             download_completed[0] = True
         except Exception as e:
           download_error[0] = e
           download_completed[0] = True
-
 
       t = threading.Thread(target=run_dl)
       t.start()
