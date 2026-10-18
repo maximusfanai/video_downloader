@@ -524,8 +524,7 @@ if not st.session_state.downloaded_file:
         mime_type = "audio/mpeg"
         target_ext = "mp3"
       else:
-        # Flexible format selector that never throws "Requested format is not available"
-        ydl_format = "bestvideo+bestaudio/best"
+        ydl_format = "best/best"
         if "MKV" in selected_format.upper():
           mime_type = "video/x-matroska"
           target_ext = "mkv"
@@ -536,7 +535,6 @@ if not st.session_state.downloaded_file:
           mime_type = "video/mp4"
           target_ext = "mp4"
 
-      res = selected_quality.replace("P", "")
       quality_tag = (
           "Audio" if "MP3" in selected_format.upper() else selected_quality
       )
@@ -548,9 +546,6 @@ if not st.session_state.downloaded_file:
       extracted_info = [None]
 
       target_url = url.strip()
-      if target_url.startswith("http://") or target_url.startswith("https://"):
-        if "youtube.com" not in target_url and "youtu.be" not in target_url:
-          ydl_format = "best/best"
 
       ydl_opts = {
           "format": ydl_format,
@@ -561,16 +556,9 @@ if not st.session_state.downloaded_file:
           "extractor_args": {
               "youtube": {
                   "player_client": ["android", "mweb", "ios", "web"],
-                  "player_skip": ["webpage", "configs"],
               }
           },
       }
-
-      if "MP3" not in selected_format.upper() and (
-          "youtube.com" in target_url or "youtu.be" in target_url
-      ):
-        # Fallback sorting: tries requested resolution first, falls back gracefully to whatever is highest available
-        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4:m4a", "res"]
 
       if "MP3" in selected_format.upper():
         ydl_opts["postprocessors"] = [{
