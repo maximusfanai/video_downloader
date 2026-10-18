@@ -384,7 +384,6 @@ url = st.text_input(
     label_visibility="collapsed",
 )
 
-# JavaScript observer: Forces React & Streamlit to rerun instantly on paste
 st.components.v1.html(
     """
     <script>
@@ -425,7 +424,8 @@ st.components.v1.html(
 )
 
 st.markdown(
-    '<div class="section-label"><span style="color: #ff001e;">▶</span> Choose Format :</div>',
+    '<div class="section-label"><span style="color: #ff001e;">▶</span> Choose'
+    " Format :</div>",
     unsafe_allow_html=True,
 )
 selected_format = st.radio(
@@ -436,7 +436,8 @@ selected_format = st.radio(
 )
 
 st.markdown(
-    '<div class="section-label"><span style="color: #ff001e;">▶</span> Select Quality :</div>',
+    '<div class="section-label"><span style="color: #ff001e;">▶</span> Select'
+    " Quality :</div>",
     unsafe_allow_html=True,
 )
 selected_quality = st.radio(
@@ -449,7 +450,6 @@ selected_quality = st.radio(
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Main Download Controller
 if not st.session_state.downloaded_file:
   if url and url.strip() != "":
     if not st.session_state.is_downloading and not st.session_state.show_ad:
@@ -463,7 +463,6 @@ if not st.session_state.downloaded_file:
         st.session_state.ad_timer = 25
         st.rerun()
 
-  # Ad Countdown Display with Google AdSense code properly rendered via components.html
   if st.session_state.show_ad:
     ad_placeholder = st.empty()
 
@@ -479,7 +478,6 @@ if not st.session_state.downloaded_file:
             unsafe_allow_html=True,
         )
 
-        # Render Google AdSense safely inside Streamlit component
         st.components.v1.html(
             """
                     <div style="margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px dashed rgba(255,255,255,0.15); padding: 10px;">
@@ -562,6 +560,7 @@ if not st.session_state.downloaded_file:
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
+          "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
       }
 
       if "MP3" not in selected_format.upper() and (
@@ -578,6 +577,7 @@ if not st.session_state.downloaded_file:
       else:
         ydl_opts["merge_output_format"] = target_ext
 
+
       def run_dl():
         try:
           with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -593,6 +593,7 @@ if not st.session_state.downloaded_file:
         except Exception as e:
           download_error[0] = e
           download_completed[0] = True
+
 
       t = threading.Thread(target=run_dl)
       t.start()
@@ -675,7 +676,6 @@ if not st.session_state.downloaded_file:
         st.session_state.is_audio = "MP3" in selected_format.upper()
         st.session_state.is_downloading = False
 
-        # Add to recent downloads history
         if extracted_info[0]:
           vid_title = extracted_info[0].get("title", "YouTube Video")
           file_path = download_result[0]
@@ -707,12 +707,12 @@ if not st.session_state.downloaded_file:
       st.session_state.is_downloading = False
       st.error(f"Dik lo a awm tlat: {e}")
 
-# Downloaded Media Preview Section
 if st.session_state.downloaded_file and os.path.exists(
     st.session_state.downloaded_file
 ):
   st.markdown(
-      '<div class="section-label"><span style="color: #ff001e;">▶</span> Downloaded Media Preview :</div>',
+      '<div class="section-label"><span style="color: #ff001e;">▶</span>'
+      " Downloaded Media Preview :</div>",
       unsafe_allow_html=True,
   )
 
