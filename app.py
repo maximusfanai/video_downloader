@@ -26,37 +26,32 @@ def get_image_base64(file_path):
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
 
-# Logos path detection
-logo_path = r"F:\video_downloader\logo.png"
+# Logos path detection (Streamlit Cloud & Local compatible)
+logo_path = os.path.join(current_dir, "logo.png")
 if not os.path.exists(logo_path):
   logo_path = os.path.join(current_dir, "1logo.png")
   if not os.path.exists(logo_path):
     logo_path = os.path.join(root_dir, "logo.png")
 logo_b64 = get_image_base64(logo_path)
 
-theme_img_path = r"F:\video_downloader\theme.png"
+theme_img_path = os.path.join(current_dir, "theme.png")
+if not os.path.exists(theme_img_path):
+  theme_img_path = os.path.join(root_dir, "theme.png")
 theme_img_b64 = get_image_base64(theme_img_path)
 
-# Session state initialization:
-# - App i run hmasak berah chuan app_started a la awm lo vang a, 
-#   logo.png leh Welcome page lang turin FALSE vekin a in-start ang.
-# - A hnu lama app an hman zawha an luh nawn lehna apiangah chuan 
-#   logo.png a bo tawh ang a, Welcome page a rawn lang hmasa ber tawh ang.
-# - Mahse app chhung an luh hnu a browser-ah refresh (F5) an hmeh chuan 
-#   engmah lang lovin direct-in homepage/dashboard-ah a lut phei nghal zel tawh ang.
+# Session state initialization
 if "app_started" not in st.session_state:
   st.session_state["app_started"] = True
   st.session_state["show_login"] = False
   st.session_state["logged_in"] = False
   st.session_state["login_page_loaded_time"] = None
 else:
-  # Refresh anih tawh chuan splash leh welcome page pelh nghal nan True sa vek tawh ang
   if "show_login" not in st.session_state:
     st.session_state["show_login"] = True
   if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = True
 
-# --- ROUTING FOR DOWNLOADERS (Moved to top for instant execution) ---
+# --- ROUTING FOR DOWNLOADERS ---
 query_params = st.query_params
 page = query_params.get("page")
 
@@ -163,7 +158,6 @@ if not st.session_state["show_login"]:
 else:
   # --- 2. LOGIN PAGE / DASHBOARD STAGE ---
   if not st.session_state["logged_in"]:
-    # Full Login Page with Welcome Button
     st.markdown(
         """
         <style>
@@ -256,9 +250,6 @@ else:
       with col2:
         st.markdown('<div class="welcome-btn-wrapper">', unsafe_allow_html=True)
         if st.button("Welcome", use_container_width=True, type="primary"):
-          # Welcome button hmeh a nih tawh chuan logged_in chu True-ah dah a ni ang a,
-          # tichuan a hnu lama app an luh nawn lehna apiangah welcome page a lang hmasa tawh ang,
-          # mahse browser-ah refresh an hmeh erawh chuan direct-in homepage-ah a lut phei tawh ang.
           st.session_state["logged_in"] = True
           st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
