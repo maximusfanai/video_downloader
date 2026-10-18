@@ -519,27 +519,24 @@ if not st.session_state.downloaded_file:
     progress_placeholder = st.empty()
 
     try:
-      res = selected_quality.replace("P", "")
-
       if "MP3" in selected_format.upper():
         ydl_format = "bestaudio/best"
         mime_type = "audio/mpeg"
         target_ext = "mp3"
-      elif "MKV" in selected_format.upper():
-        ydl_format = "bestvideo+bestaudio/best"
-        mime_type = "video/x-matroska"
-        target_ext = "mkv"
-      elif "WEBM" in selected_format.upper():
-        ydl_format = "bestvideo[ext=webm]+bestaudio/best"
-        mime_type = "video/webm"
-        target_ext = "webm"
       else:
-        ydl_format = (
-            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
-        )
-        mime_type = "video/mp4"
-        target_ext = "mp4"
+        # Flexible format selector that never throws "Requested format is not available"
+        ydl_format = "bestvideo+bestaudio/best"
+        if "MKV" in selected_format.upper():
+          mime_type = "video/x-matroska"
+          target_ext = "mkv"
+        elif "WEBM" in selected_format.upper():
+          mime_type = "video/webm"
+          target_ext = "webm"
+        else:
+          mime_type = "video/mp4"
+          target_ext = "mp4"
 
+      res = selected_quality.replace("P", "")
       quality_tag = (
           "Audio" if "MP3" in selected_format.upper() else selected_quality
       )
@@ -572,7 +569,8 @@ if not st.session_state.downloaded_file:
       if "MP3" not in selected_format.upper() and (
           "youtube.com" in target_url or "youtu.be" in target_url
       ):
-        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4:m4a"]
+        # Fallback sorting: tries requested resolution first, falls back gracefully to whatever is highest available
+        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4:m4a", "res"]
 
       if "MP3" in selected_format.upper():
         ydl_opts["postprocessors"] = [{
