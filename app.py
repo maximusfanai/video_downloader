@@ -26,7 +26,7 @@ def get_image_base64(file_path):
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
 
-# Logos path detection (Streamlit Cloud & Local compatible)
+# Logos path detection
 logo_path = os.path.join(current_dir, "logo.png")
 if not os.path.exists(logo_path):
   logo_path = os.path.join(current_dir, "1logo.png")
@@ -51,13 +51,13 @@ else:
   if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = True
 
-# --- ROUTING FOR DOWNLOADERS ---
+# --- ROUTING FOR DOWNLOADERS (Root folder routing) ---
 query_params = st.query_params
 page = query_params.get("page")
 
 if page and page != "":
   if page == "facebook":
-    fb_path = os.path.join(current_dir, "core", "facebook.py")
+    fb_path = os.path.join(current_dir, "facebook.py")
     if os.path.exists(fb_path):
       runpy.run_path(fb_path, run_name="__main__")
       st.stop()
@@ -65,7 +65,7 @@ if page and page != "":
       st.error(f"File not found: {fb_path}")
 
   elif page == "youtube":
-    yt_path = os.path.join(current_dir, "core", "youtube.py")
+    yt_path = os.path.join(current_dir, "youtube.py")
     if os.path.exists(yt_path):
       runpy.run_path(yt_path, run_name="__main__")
       st.stop()
@@ -73,7 +73,7 @@ if page and page != "":
       st.error(f"File not found: {yt_path}")
 
   elif page == "instagram":
-    ig_path = os.path.join(current_dir, "core", "instagram.py")
+    ig_path = os.path.join(current_dir, "instagram.py")
     if os.path.exists(ig_path):
       runpy.run_path(ig_path, run_name="__main__")
       st.stop()
