@@ -553,7 +553,12 @@ if not st.session_state.downloaded_file:
           "quiet": True,
           "noplaylist": True,
           "cookiefile": "cookies.txt",
-          "js_runtimes": {"deno": {}},  # JavaScript runtime belh a ni
+          "js_runtimes": {"deno": {}},
+          "extractor_args": {
+              "youtube": {
+                  "player_client": ["android", "web"],
+              }
+          },
       }
 
       if "MP3" in selected_format.upper():
