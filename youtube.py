@@ -6,9 +6,9 @@ import streamlit as st
 import yt_dlp
 
 try:
-    static_ffmpeg.add_paths()
+  static_ffmpeg.add_paths()
 except Exception:
-    pass
+  pass
 
 st.set_page_config(
     page_title="YouTube Video Downloader",
@@ -19,19 +19,19 @@ st.set_page_config(
 
 # Session States Initialization
 if "downloaded_file" not in st.session_state:
-    st.session_state.downloaded_file = None
+  st.session_state.downloaded_file = None
 if "downloaded_mime" not in st.session_state:
-    st.session_state.downloaded_mime = "video/mp4"
+  st.session_state.downloaded_mime = "video/mp4"
 if "is_audio" not in st.session_state:
-    st.session_state.is_audio = False
+  st.session_state.is_audio = False
 if "is_downloading" not in st.session_state:
-    st.session_state.is_downloading = False
+  st.session_state.is_downloading = False
 if "progress_val" not in st.session_state:
-    st.session_state.progress_val = 0
+  st.session_state.progress_val = 0
 if "show_ad" not in st.session_state:
-    st.session_state.show_ad = False
+  st.session_state.show_ad = False
 if "ad_timer" not in st.session_state:
-    st.session_state.ad_timer = 25
+  st.session_state.ad_timer = 25
 
 st.markdown(
     """
@@ -352,8 +352,9 @@ div[data-testid="stVideo"] video { max-height: 380px !important; object-fit: con
     </div>
     <div class="top-right-container">
         <div class="action-icons-row" style="gap: 10px;">
-            <form method="get" style="margin: 0; display: inline-flex;">
-                <button type="submit" class="icon-btn-style" title="Home / Reset" style="background: #090e1c; padding: 0;">
+            <form action="" method="get" style="margin: 0; display: inline-flex;">
+                <input type="hidden" name="page" value="home">
+                <button type="submit" class="icon-btn-style" title="Home / Reset" style="background: #090e1c; padding: 0; cursor: pointer;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ffffff" viewBox="0 0 24 24"><path d="M12 3l10 9h-3v9h-6v-6h-2v6h-6v-9h-3z"/></svg>
                 </button>
             </form>
@@ -383,7 +384,6 @@ url = st.text_input(
     label_visibility="collapsed",
 )
 
-# JavaScript observer: Forces React & Streamlit to rerun instantly on paste
 st.components.v1.html(
     """
     <script>
@@ -424,7 +424,8 @@ st.components.v1.html(
 )
 
 st.markdown(
-    '<div class="section-label"><span style="color: #ff001e;">▶</span> Choose Format :</div>',
+    '<div class="section-label"><span style="color: #ff001e;">▶</span> Choose'
+    " Format :</div>",
     unsafe_allow_html=True,
 )
 selected_format = st.radio(
@@ -435,7 +436,8 @@ selected_format = st.radio(
 )
 
 st.markdown(
-    '<div class="section-label"><span style="color: #ff001e;">▶</span> Select Quality :</div>',
+    '<div class="section-label"><span style="color: #ff001e;">▶</span> Select'
+    " Quality :</div>",
     unsafe_allow_html=True,
 )
 selected_quality = st.radio(
@@ -448,39 +450,36 @@ selected_quality = st.radio(
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Main Download Controller
 if not st.session_state.downloaded_file:
-    if url and url.strip() != "":
-        if not st.session_state.is_downloading and not st.session_state.show_ad:
-            if st.button(
-                "Download Now ↓",
-                key="main_download_btn",
-                type="primary",
-                use_container_width=True,
-            ):
-                st.session_state.show_ad = True
-                st.session_state.ad_timer = 25
-                st.rerun()
+  if url and url.strip() != "":
+    if not st.session_state.is_downloading and not st.session_state.show_ad:
+      if st.button(
+          "Download Now ↓",
+          key="main_download_btn",
+          type="primary",
+          use_container_width=True,
+      ):
+        st.session_state.show_ad = True
+        st.session_state.ad_timer = 25
+        st.rerun()
 
-    # Ad Countdown Display with Google AdSense code properly rendered via components.html
-    if st.session_state.show_ad:
-        ad_placeholder = st.empty()
-        
-        while st.session_state.ad_timer > 0:
-            with ad_placeholder.container():
-                st.markdown(
-                    f"""
+  if st.session_state.show_ad:
+    ad_placeholder = st.empty()
+
+    while st.session_state.ad_timer > 0:
+      with ad_placeholder.container():
+        st.markdown(
+            f"""
                     <div class="ad-box">
                         <div class="ad-title">SPONSORED ADVERTISEMENT</div>
                         <div class="ad-desc">Please wait while your download link is being prepared...</div>
                     </div>
                     """,
-                    unsafe_allow_html=True,
-                )
-                
-                # Render Google AdSense safely inside Streamlit component
-                st.components.v1.html(
-                    """
+            unsafe_allow_html=True,
+        )
+
+        st.components.v1.html(
+            """
                     <div style="margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px dashed rgba(255,255,255,0.15); padding: 10px;">
                         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
                         <ins class="adsbygoogle"
@@ -494,121 +493,130 @@ if not st.session_state.downloaded_file:
                         </script>
                     </div>
                     """,
-                    height=100,
-                )
+            height=100,
+        )
 
-                st.markdown(
-                    f"""
+        st.markdown(
+            f"""
                     <div class="ad-box" style="margin-top: 0; border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 0;">
                         <div class="ad-timer">{st.session_state.ad_timer}s</div>
                         <div style="font-size: 10px; color: #838d9d; margin-top: 5px;">Advertisement is playing (non-skippable)</div>
                     </div>
                     """,
-                    unsafe_allow_html=True,
-                )
+            unsafe_allow_html=True,
+        )
 
-            time.sleep(1)
-            st.session_state.ad_timer -= 1
-        
-        ad_placeholder.empty()
-        st.session_state.show_ad = False
-        st.session_state.is_downloading = True
-        st.session_state.progress_val = 1
-        st.rerun()
+      time.sleep(1)
+      st.session_state.ad_timer -= 1
 
-    if st.session_state.is_downloading:
-        progress_placeholder = st.empty()
+    ad_placeholder.empty()
+    st.session_state.show_ad = False
+    st.session_state.is_downloading = True
+    st.session_state.progress_val = 1
+    st.rerun()
 
+  if st.session_state.is_downloading:
+    progress_placeholder = st.empty()
+
+    try:
+      res = selected_quality.replace("P", "")
+
+      if "MP3" in selected_format.upper():
+        ydl_format = "bestaudio/best"
+        mime_type = "audio/mpeg"
+        target_ext = "mp3"
+      elif "MKV" in selected_format.upper():
+        ydl_format = "bestvideo+bestaudio/best"
+        mime_type = "video/x-matroska"
+        target_ext = "mkv"
+      elif "WEBM" in selected_format.upper():
+        ydl_format = "bestvideo[ext=webm]+bestaudio/best"
+        mime_type = "video/webm"
+        target_ext = "webm"
+      else:
+        ydl_format = (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+        )
+        mime_type = "video/mp4"
+        target_ext = "mp4"
+
+      quality_tag = (
+          "Audio" if "MP3" in selected_format.upper() else selected_quality
+      )
+      outtmpl_str = f"%(title)s_{quality_tag}.%(ext)s"
+
+      download_completed = [False]
+      download_error = [None]
+      download_result = [None]
+      extracted_info = [None]
+
+      target_url = url.strip()
+      if target_url.startswith("http://") or target_url.startswith("https://"):
+        if "youtube.com" not in target_url and "youtu.be" not in target_url:
+          ydl_format = "best/best"
+
+      ydl_opts = {
+          "format": ydl_format,
+          "outtmpl": outtmpl_str,
+          "quiet": True,
+          "noplaylist": True,
+          "cookiefile": "cookies.txt",
+          "extractor_args": {
+              "youtube": {
+                  "player_client": ["android", "mweb", "ios", "web"],
+                  "player_skip": ["webpage", "configs"],
+              }
+          },
+      }
+
+      if "MP3" not in selected_format.upper() and (
+          "youtube.com" in target_url or "youtu.be" in target_url
+      ):
+        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4:m4a"]
+
+      if "MP3" in selected_format.upper():
+        ydl_opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }]
+      else:
+        ydl_opts["merge_output_format"] = target_ext
+
+
+      def run_dl():
         try:
-            res = selected_quality.replace("P", "")
+          with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(target_url, download=True)
+            extracted_info[0] = info
+            filename = ydl.prepare_filename(info)
+            base, _ = os.path.splitext(filename)
+            expected_file = f"{base}.{target_ext}"
+            if os.path.exists(expected_file):
+              filename = expected_file
+            download_result[0] = filename
+            download_completed[0] = True
+        except Exception as e:
+          download_error[0] = e
+          download_completed[0] = True
 
-            if "MP3" in selected_format.upper():
-                ydl_format = "bestaudio/best"
-                mime_type = "audio/mpeg"
-                target_ext = "mp3"
-            elif "MKV" in selected_format.upper():
-                ydl_format = "bestvideo+bestaudio/best"
-                mime_type = "video/x-matroska"
-                target_ext = "mkv"
-            elif "WEBM" in selected_format.upper():
-                ydl_format = "bestvideo[ext=webm]+bestaudio/best"
-                mime_type = "video/webm"
-                target_ext = "webm"
-            else:
-                ydl_format = (
-                    "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
-                )
-                mime_type = "video/mp4"
-                target_ext = "mp4"
 
-            quality_tag = (
-                "Audio" if "MP3" in selected_format.upper() else selected_quality
-            )
-            outtmpl_str = f"%(title)s_{quality_tag}.%(ext)s"
+      t = threading.Thread(target=run_dl)
+      t.start()
 
-            download_completed = [False]
-            download_error = [None]
-            download_result = [None]
-            extracted_info = [None]
+      current_p = st.session_state.progress_val
+      if current_p < 1:
+        current_p = 1
 
-            target_url = url.strip()
-            if target_url.startswith("http://") or target_url.startswith("https://"):
-                if "youtube.com" not in target_url and "youtu.be" not in target_url:
-                    ydl_format = "best/best"
+      while not download_completed[0]:
+        if current_p < 92:
+          current_p += 1
+          st.session_state.progress_val = current_p
 
-            ydl_opts = {
-                "format": ydl_format,
-                "outtmpl": outtmpl_str,
-                "quiet": True,
-                "noplaylist": True,
-            }
-
-            if "MP3" not in selected_format.upper() and ("youtube.com" in target_url or "youtu.be" in target_url):
-                ydl_opts["format_sort"] = [f"res:{res}"]
-
-            if "MP3" in selected_format.upper():
-                ydl_opts["postprocessors"] = [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                        "preferredquality": "192",
-                    }
-                ]
-            else:
-                ydl_opts["merge_output_format"] = target_ext
-
-            def run_dl():
-                try:
-                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                        info = ydl.extract_info(target_url, download=True)
-                        extracted_info[0] = info
-                        filename = ydl.prepare_filename(info)
-                        base, _ = os.path.splitext(filename)
-                        expected_file = f"{base}.{target_ext}"
-                        if os.path.exists(expected_file):
-                            filename = expected_file
-                        download_result[0] = filename
-                        download_completed[0] = True
-                except Exception as e:
-                    download_error[0] = e
-                    download_completed[0] = True
-
-            t = threading.Thread(target=run_dl)
-            t.start()
-
-            current_p = st.session_state.progress_val
-            if current_p < 1:
-                current_p = 1
-
-            while not download_completed[0]:
-                if current_p < 92:
-                    current_p += 1
-                    st.session_state.progress_val = current_p
-
-                deg = int((current_p / 100) * 360)
-                with progress_placeholder.container():
-                    st.markdown(
-                        f"""
+        deg = int((current_p / 100) * 360)
+        with progress_placeholder.container():
+          st.markdown(
+              f"""
                     <div class="neon-loader-container">
                         <div class="outer-orbit-ring">
                             <div class="neon-ring" style="--deg: {deg}deg;">
@@ -627,24 +635,24 @@ if not st.session_state.downloaded_file:
                         <div class="loading-subtitle">Please do not close the app</div>
                     </div>
                     """,
-                        unsafe_allow_html=True,
-                    )
+              unsafe_allow_html=True,
+          )
 
-                time.sleep(0.08)
+        time.sleep(0.08)
 
-            t.join()
+      t.join()
 
-            if download_error[0]:
-                st.session_state.is_downloading = False
-                st.error(f"Dik lo a awm tlat: {download_error[0]}")
-            else:
-                while current_p < 100:
-                    current_p += 1
-                    st.session_state.progress_val = current_p
-                    deg = int((current_p / 100) * 360)
-                    with progress_placeholder.container():
-                        st.markdown(
-                            f"""
+      if download_error[0]:
+        st.session_state.is_downloading = False
+        st.error(f"Dik lo a awm tlat: {download_error[0]}")
+      else:
+        while current_p < 100:
+          current_p += 1
+          st.session_state.progress_val = current_p
+          deg = int((current_p / 100) * 360)
+          with progress_placeholder.container():
+            st.markdown(
+                f"""
                         <div class="neon-loader-container">
                             <div class="outer-orbit-ring">
                                 <div class="neon-ring" style="--deg: {deg}deg;">
@@ -663,74 +671,75 @@ if not st.session_state.downloaded_file:
                             <div class="loading-subtitle">Almost done, please wait</div>
                         </div>
                         """,
-                            unsafe_allow_html=True,
-                        )
-                    time.sleep(0.06)
+                unsafe_allow_html=True,
+            )
+          time.sleep(0.06)
 
-                progress_placeholder.empty()
+        progress_placeholder.empty()
 
-                st.session_state.downloaded_file = download_result[0]
-                st.session_state.downloaded_mime = mime_type
-                st.session_state.is_audio = "MP3" in selected_format.upper()
-                st.session_state.is_downloading = False
-                
-                # Add to recent downloads history
-                if extracted_info[0]:
-                    vid_title = extracted_info[0].get("title", "YouTube Video")
-                    file_path = download_result[0]
-                    file_size_mb = 0.0
-                    if os.path.exists(file_path):
-                        file_size_mb = round(os.path.getsize(file_path) / (1024 * 1024), 1)
-                    
-                    if "downloads" not in st.session_state:
-                        st.session_state.downloads = []
-                        
-                    st.session_state.downloads.insert(
-                        0,
-                        {
-                            "title": vid_title,
-                            "platform": "YouTube",
-                            "size": f"{file_size_mb} MB",
-                            "quality": selected_quality,
-                            "color": "#FF0000",
-                            "icon": "▶",
-                            "thumb": "",
-                        },
-                    )
+        st.session_state.downloaded_file = download_result[0]
+        st.session_state.downloaded_mime = mime_type
+        st.session_state.is_audio = "MP3" in selected_format.upper()
+        st.session_state.is_downloading = False
 
-                st.rerun()
+        if extracted_info[0]:
+          vid_title = extracted_info[0].get("title", "YouTube Video")
+          file_path = download_result[0]
+          file_size_mb = 0.0
+          if os.path.exists(file_path):
+            file_size_mb = round(
+                os.path.getsize(file_path) / (1024 * 1024), 1
+            )
 
-        except Exception as e:
-            st.session_state.is_downloading = False
-            st.error(f"Dik lo a awm tlat: {e}")
+          if "downloads" not in st.session_state:
+            st.session_state.downloads = []
 
-# Downloaded Media Preview Section
+          st.session_state.downloads.insert(
+              0,
+              {
+                  "title": vid_title,
+                  "platform": "YouTube",
+                  "size": f"{file_size_mb} MB",
+                  "quality": selected_quality,
+                  "color": "#FF0000",
+                  "icon": "▶",
+                  "thumb": "",
+              },
+          )
+
+        st.rerun()
+
+    except Exception as e:
+      st.session_state.is_downloading = False
+      st.error(f"Dik lo a awm tlat: {e}")
+
 if st.session_state.downloaded_file and os.path.exists(
     st.session_state.downloaded_file
 ):
-    st.markdown(
-        '<div class="section-label"><span style="color: #ff001e;">▶</span> Downloaded Media Preview :</div>',
-        unsafe_allow_html=True,
-    )
+  st.markdown(
+      '<div class="section-label"><span style="color: #ff001e;">▶</span>'
+      " Downloaded Media Preview :</div>",
+      unsafe_allow_html=True,
+  )
 
-    if st.button(
-        "🔄 Download Another Video",
+  if st.button(
+      "🔄 Download Another Video",
+      use_container_width=True,
+      key="download_another_btn",
+  ):
+    st.session_state.downloaded_file = None
+    st.rerun()
+
+  if st.session_state.is_audio:
+    st.audio(st.session_state.downloaded_file)
+  else:
+    st.video(st.session_state.downloaded_file)
+
+  with open(st.session_state.downloaded_file, "rb") as file:
+    st.download_button(
+        label="Save Folder",
+        data=file,
+        file_name=os.path.basename(st.session_state.downloaded_file),
+        mime=st.session_state.downloaded_mime,
         use_container_width=True,
-        key="download_another_btn",
-    ):
-        st.session_state.downloaded_file = None
-        st.rerun()
-
-    if st.session_state.is_audio:
-        st.audio(st.session_state.downloaded_file)
-    else:
-        st.video(st.session_state.downloaded_file)
-
-    with open(st.session_state.downloaded_file, "rb") as file:
-        st.download_button(
-            label="Save Folder",
-            data=file,
-            file_name=os.path.basename(st.session_state.downloaded_file),
-            mime=st.session_state.downloaded_mime,
-            use_container_width=True,
-        )
+    )
