@@ -1,4 +1,4 @@
 streamlit
 yt-dlp
 static_ffmpeg
-imageio_ffmpega
+imageio_ffmpeg
