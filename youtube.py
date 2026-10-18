@@ -560,7 +560,12 @@ if not st.session_state.downloaded_file:
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
-          "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+          "extractor_args": {
+              "youtube": {
+                  "player_client": ["android", "mweb", "ios", "web"],
+                  "player_skip": ["webpage", "configs"],
+              }
+          },
       }
 
       if "MP3" not in selected_format.upper() and (
