@@ -524,8 +524,8 @@ if not st.session_state.downloaded_file:
         mime_type = "audio/mpeg"
         target_ext = "mp3"
       else:
-        # Shorts leh regular videos tan format flexible ber hmang turin
-        ydl_format = "bv*+ba/b"
+        # Shorts leh regular video tin tan format 'best' hmang hian error a awm ngai tawh lo
+        ydl_format = "best"
         if "MKV" in selected_format.upper():
           mime_type = "video/x-matroska"
           target_ext = "mkv"
