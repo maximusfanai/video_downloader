@@ -3,7 +3,6 @@ import os
 import runpy
 import time
 import streamlit as st
-import streamlit.components.v1 as components
 
 # Page Config
 st.set_page_config(
@@ -27,24 +26,38 @@ def get_image_base64(file_path):
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.dirname(current_dir)
 
-# Logos path detection (Using F:\video_downloader\logo.png)
-logo_path = r"F:\video_downloader\logo.png"
+# Logos path detection
+logo_path = os.path.join(current_dir, "logo.png")
 if not os.path.exists(logo_path):
   logo_path = os.path.join(current_dir, "1logo.png")
   if not os.path.exists(logo_path):
     logo_path = os.path.join(root_dir, "logo.png")
 logo_b64 = get_image_base64(logo_path)
 
-theme_img_path = r"F:\video_downloader\theme.png"
+theme_img_path = os.path.join(current_dir, "theme.png")
+if not os.path.exists(theme_img_path):
+  theme_img_path = os.path.join(root_dir, "theme.png")
 theme_img_b64 = get_image_base64(theme_img_path)
 
-# --- ROUTING FOR DOWNLOADERS (Moved to top for instant execution) ---
+# Session state initialization
+if "app_started" not in st.session_state:
+  st.session_state["app_started"] = True
+  st.session_state["show_login"] = False
+  st.session_state["logged_in"] = False
+  st.session_state["login_page_loaded_time"] = None
+else:
+  if "show_login" not in st.session_state:
+    st.session_state["show_login"] = True
+  if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = True
+
+# --- ROUTING FOR DOWNLOADERS (Root folder routing) ---
 query_params = st.query_params
 page = query_params.get("page")
 
-if page:
+if page and page != "":
   if page == "facebook":
-    fb_path = os.path.join(current_dir, "core", "facebook.py")
+    fb_path = os.path.join(current_dir, "facebook.py")
     if os.path.exists(fb_path):
       runpy.run_path(fb_path, run_name="__main__")
       st.stop()
@@ -52,7 +65,7 @@ if page:
       st.error(f"File not found: {fb_path}")
 
   elif page == "youtube":
-    yt_path = os.path.join(current_dir, "core", "youtube.py")
+    yt_path = os.path.join(current_dir, "youtube.py")
     if os.path.exists(yt_path):
       runpy.run_path(yt_path, run_name="__main__")
       st.stop()
@@ -60,22 +73,17 @@ if page:
       st.error(f"File not found: {yt_path}")
 
   elif page == "instagram":
-    ig_path = os.path.join(current_dir, "core", "instagram.py")
+    ig_path = os.path.join(current_dir, "instagram.py")
     if os.path.exists(ig_path):
       runpy.run_path(ig_path, run_name="__main__")
       st.stop()
     else:
       st.error(f"File not found: {ig_path}")
-
-# Session state initialization
-if "show_login" not in st.session_state:
-  st.session_state["show_login"] = False
-
-if "logged_in" not in st.session_state:
-  st.session_state["logged_in"] = False
-
-if "login_page_loaded_time" not in st.session_state:
-  st.session_state["login_page_loaded_time"] = None
+  elif page == "home":
+    st.session_state["show_login"] = True
+    st.session_state["logged_in"] = True
+    st.query_params.clear()
+    st.rerun()
 
 
 # --- 1. SPLASH SCREEN STAGE ---
@@ -142,19 +150,6 @@ if not st.session_state["show_login"]:
       unsafe_allow_html=True,
   )
 
-  # JavaScript timer for splash screen refresh (5 seconds duration)
-  components.html(
-      """
-        <script>
-            setTimeout(function() {
-                window.parent.document.querySelector('iframe').contentWindow.location.reload();
-            }, 5000);
-        </script>
-        """,
-      height=0,
-      width=0,
-  )
-
   time.sleep(5.0)
   st.session_state["show_login"] = True
   st.session_state["login_page_loaded_time"] = time.time()
@@ -163,7 +158,6 @@ if not st.session_state["show_login"]:
 else:
   # --- 2. LOGIN PAGE / DASHBOARD STAGE ---
   if not st.session_state["logged_in"]:
-    # Full Login Page with Welcome Button
     st.markdown(
         """
         <style>
@@ -263,7 +257,7 @@ else:
     st.markdown("</div>", unsafe_allow_html=True)
 
   else:
-    # --- 3. MAIN DASHBOARD PAGE (After successful login) ---
+    # --- 3. MAIN DASHBOARD PAGE ---
     st.markdown(
         """
     <style>
@@ -372,9 +366,9 @@ else:
             box-shadow: 0 0 14px rgba(0, 136, 255, 0.35);
         }
         .ig-card { 
-            background: linear-gradient(145deg, #2a032b, #0d020e);
-            border: 1.5px solid #e000ff;
-            box-shadow: 0 0 14px rgba(224, 0, 255, 0.35);
+            background: radial-gradient(circle at 30% 107%, rgba(253, 244, 151, 0.25) 0%, rgba(253, 89, 73, 0.25) 45%, rgba(214, 36, 159, 0.25) 60%, rgba(40, 90, 235, 0.25) 90%), linear-gradient(145deg, #2a032b, #0d020e);
+            border: 1.5px solid #d6249f;
+            box-shadow: 0 0 14px rgba(214, 36, 159, 0.5);
         }
 
         .card-title {
@@ -383,7 +377,6 @@ else:
             letter-spacing: 0.3px;
         }
 
-        /* Custom styling to make the welcome button look exactly like the gradient banner in the screenshot */
         .stButton>button {
             background: linear-gradient(90deg, #3b82f6, #ec4899, #f97316) !important;
             color: white !important;
