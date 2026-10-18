@@ -1,448 +1,739 @@
-import base64
 import os
-import runpy
+import threading
 import time
+import static_ffmpeg
 import streamlit as st
+import yt_dlp
 
-# Page Config
+try:
+  static_ffmpeg.add_paths()
+except Exception:
+  pass
+
 st.set_page_config(
-    page_title="CoCo Media Tube",
-    page_icon="🎬",
+    page_title="YouTube Video Downloader",
+    page_icon="▶",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
+# Session States Initialization
+if "downloaded_file" not in st.session_state:
+  st.session_state.downloaded_file = None
+if "downloaded_mime" not in st.session_state:
+  st.session_state.downloaded_mime = "video/mp4"
+if "is_audio" not in st.session_state:
+  st.session_state.is_audio = False
+if "is_downloading" not in st.session_state:
+  st.session_state.is_downloading = False
+if "progress_val" not in st.session_state:
+  st.session_state.progress_val = 0
+if "show_ad" not in st.session_state:
+  st.session_state.show_ad = False
+if "ad_timer" not in st.session_state:
+  st.session_state.ad_timer = 25
 
-# Function to encode local image to Base64
-def get_image_base64(file_path):
-  if os.path.exists(file_path):
-    with open(file_path, "rb") as f:
-      data = f.read()
-    return f"data:image/png;base64,{base64.b64encode(data).decode()}"
-  return ""
+st.markdown(
+    """
+<style>
+#MainMenu, footer, header, [data-testid="stHeader"], [data-testid="stToolbar"] { display: none !important; }
 
+html, body, .stApp, [data-testid="stAppViewContainer"] {
+    background-color: #04060d !important;
+    color: #ffffff !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
 
-# Path setup
-current_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(current_dir)
+.main .block-container, [data-testid="stMainBlockContainer"] {
+    max-width: 480px !important; width: 100% !important; margin: 0 auto !important; padding: 12px 10px 130px 10px !important;
+}
 
-# Logos path detection
-logo_path = os.path.join(current_dir, "logo.png")
-if not os.path.exists(logo_path):
-  logo_path = os.path.join(current_dir, "1logo.png")
-  if not os.path.exists(logo_path):
-    logo_path = os.path.join(root_dir, "logo.png")
-logo_b64 = get_image_base64(logo_path)
+.header-box { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; margin-top: 2px; }
+.brand-row { display: flex; align-items: center; gap: 8px; }
+.yt-icon { background: #ff0000; color: #ffffff; padding: 4px 10px; border-radius: 8px; font-size: 16px; font-weight: 700; box-shadow: 0 0 12px rgba(255, 0, 0, 0.75); display: flex; align-items: center; justify-content: center; }
+.title-white { font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 1; }
+.title-row { display: flex; gap: 6px; margin-top: 4px; align-items: flex-start; }
+.title-dark { font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; line-height: 1; }
+.title-red { font-size: 20px; font-weight: 800; color: #ff2236; letter-spacing: -0.5px; line-height: 1; }
+.subtitle-text { font-size: 11px; color: #838d9d; margin-top: 4px; font-weight: 500; }
 
-theme_img_path = os.path.join(current_dir, "theme.png")
-if not os.path.exists(theme_img_path):
-  theme_img_path = os.path.join(root_dir, "theme.png")
-theme_img_b64 = get_image_base64(theme_img_path)
+.top-right-container { display: flex; flex-direction: column; align-items: flex-end; margin-top: 2px; }
+.action-icons-row { display: flex; gap: 10px; margin-bottom: 4px; }
+.icon-btn-style { 
+    background: #090e1c; 
+    border: 1.5px solid rgba(255, 0, 30, 0.5); 
+    border-radius: 8px; 
+    width: 32px; 
+    height: 32px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    text-decoration: none !important;
+    box-shadow: 0 0 8px rgba(255, 0, 30, 0.4);
+    transition: all 0.2s ease;
+}
+.icon-btn-style:hover { border-color: #ff001e; background: #141c2e; }
 
-# Session state initialization
-if "app_started" not in st.session_state:
-  st.session_state["app_started"] = True
-  st.session_state["show_login"] = False
-  st.session_state["logged_in"] = False
-  st.session_state["login_page_loaded_time"] = None
-else:
-  if "show_login" not in st.session_state:
-    st.session_state["show_login"] = True
-  if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = True
+.graphic-link-container { display: flex; flex-direction: column; align-items: center; }
+.graphic-link { text-decoration: none !important; border-bottom: none !important; display: flex; flex-direction: column; align-items: center; }
+.watch-on-yt-text { font-size: 10px; font-weight: 800; color: #ffffff; margin-bottom: 4px; letter-spacing: 0.5px; text-align: center; }
+.graphic-glow { position: relative; width: 96px; height: 70px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(139,0,0,0.3) 0%, rgba(4,6,13,0) 75%); }
+.video-player-card { width: 84px; height: 48px; background: #090e1c; border: 1.5px solid #8b0000; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(139, 0, 0, 0.6); position: relative; }
+.vp-screen { width: 68px; height: 24px; background: #141c2e; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.vp-play-icon { color: #ff001e; font-size: 18px; }
+.vp-label { font-size: 9px; font-weight: 700; color: #ffffff; margin-top: 1px; }
+.dl-badge-card { position: absolute; bottom: -4px; right: -4px; background: #ff001e; color: #ffffff; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 9px; border: 1.5px solid #04060d; }
 
-# --- ROUTING FOR DOWNLOADERS (Root folder routing) ---
-query_params = st.query_params
-page = query_params.get("page")
+.url-input-label { font-size: 12px; font-weight: 600; color: #ffffff; margin-bottom: 4px; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
 
-if page and page != "":
-  if page == "facebook":
-    fb_path = os.path.join(current_dir, "facebook.py")
-    if os.path.exists(fb_path):
-      runpy.run_path(fb_path, run_name="__main__")
-      st.stop()
-    else:
-      st.error(f"File not found: {fb_path}")
+div[data-baseweb="input"] { background: #090e1c !important; border: 1.5px solid rgba(255, 255, 255, 0.25) !important; border-radius: 12px !important; color: white !important; }
+div[data-baseweb="input"] input { color: white !important; }
+div[data-testid="stTextInput"] div[data-baseweb="input"] ~ div { display: none !important; }
 
-  elif page == "youtube":
-    yt_path = os.path.join(current_dir, "youtube.py")
-    if os.path.exists(yt_path):
-      runpy.run_path(yt_path, run_name="__main__")
-      st.stop()
-    else:
-      st.error(f"File not found: {yt_path}")
+div[data-testid="stRadio"], 
+div[data-testid="stRadio"] > div {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
 
-  elif page == "instagram":
-    ig_path = os.path.join(current_dir, "instagram.py")
-    if os.path.exists(ig_path):
-      runpy.run_path(ig_path, run_name="__main__")
-      st.stop()
-    else:
-      st.error(f"File not found: {ig_path}")
-  elif page == "home":
-    st.session_state["show_login"] = True
-    st.session_state["logged_in"] = True
-    st.query_params.clear()
+div[data-testid="stRadio"] div[role="radiogroup"] { 
+    display: flex !important; 
+    flex-direction: row !important;
+    flex-wrap: nowrap !important; 
+    gap: 7px !important; 
+    width: 100% !important; 
+    justify-content: space-between !important;
+    align-items: stretch !important;
+}
+
+div[data-testid="stRadio"] div[role="radiogroup"] > div {
+    flex: 1 1 0% !important; 
+    width: 100% !important;
+}
+
+div[data-testid="stRadio"] div[role="radiogroup"] label {
+    background-color: #090e1c !important; 
+    border: 1.5px solid rgba(255, 255, 255, 0.4) !important; 
+    border-radius: 8px !important; 
+    padding: 6px 2px !important;
+    height: 38px !important; 
+    min-height: 38px !important;
+    cursor: pointer !important; 
+    display: flex !important; 
+    flex-direction: row !important; 
+    align-items: center !important; 
+    justify-content: center !important;
+    flex: 1 1 0% !important; 
+    width: 100% !important; 
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
+    border-color: #ff001e !important; 
+    background-color: #3b0a11 !important; 
+    box-shadow: 0 0 12px rgba(255, 0, 30, 0.5) !important; 
+}
+
+div[data-testid="stRadio"] label > div:first-child { 
+    display: none !important; 
+}
+
+div[data-testid="stRadio"] div[role="radiogroup"] label p { 
+    font-size: 10px !important; 
+    font-weight: 600 !important; 
+    color: #ffffff !important; 
+    text-align: center !important; 
+    margin: 0 !important; 
+    padding: 0 !important;
+    line-height: 1 !important; 
+    white-space: nowrap !important;
+}
+
+div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.8) !important;
+}
+
+.section-label { font-size: 12px; font-weight: 700; color: #ffffff; margin-bottom: 4px; margin-top: 10px; display: flex; align-items: center; gap: 5px; }
+
+.neon-loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0;
+}
+.outer-orbit-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(139, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 0 10px rgba(100, 0, 0, 0.6), inset 0 0 6px rgba(100, 0, 0, 0.4);
+    background: radial-gradient(circle, rgba(15, 4, 4, 0.9) 0%, rgba(6, 2, 2, 0.99) 100%);
+}
+.neon-ring {
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    background: conic-gradient(#ff1e38 0deg, #ff1e38 var(--deg), #4a0005 var(--deg), #4a0005 360deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 10px rgba(255, 0, 30, 0.5), 0 0 10px rgba(139, 0, 0, 0.6);
+    position: relative;
+}
+.neon-ring-inner {
+    width: 54px;
+    height: 54px;
+    background-color: #050202;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 30, 56, 0.2);
+}
+.neon-center-video-box {
+    width: 22px;
+    height: 15px;
+    background: #0f0505;
+    border: 1px solid #8b0000;
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 4px rgba(139, 0, 0, 0.7);
+    position: relative;
+    margin-bottom: 1px;
+}
+.neon-inner-screen {
+    width: 16px;
+    height: 9px;
+    background: #1a0808;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+.neon-play-arrow {
+    color: #ff1e38;
+    font-size: 6px;
+    filter: drop-shadow(0 0 1px #ff1e38);
+}
+.neon-dot-badge {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 3px;
+    height: 3px;
+    background: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 1px #ffffff;
+}
+.neon-percent-text {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+.loading-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 6px;
+    text-align: center;
+    letter-spacing: -0.3px;
+}
+.loading-subtitle {
+    font-size: 9px;
+    color: #838d9d;
+    margin-top: 1px;
+    text-align: center;
+}
+
+.ad-box {
+    background: rgba(15, 8, 8, 0.95);
+    border: 2px solid #ff001e;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+    box-shadow: 0 0 20px rgba(255, 0, 30, 0.4);
+    width: 100%;
+    box-sizing: border-box;
+}
+.ad-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ff001e;
+    margin-bottom: 8px;
+}
+.ad-desc {
+    font-size: 12px;
+    color: #cccccc;
+    margin-bottom: 15px;
+}
+.ad-timer {
+    font-size: 24px;
+    font-weight: 900;
+    color: #ffffff;
+    margin: 10px 0;
+}
+
+div[data-testid="stButton"] button {
+    background: rgba(8, 20, 38, 0.45) !important;
+    border: 1.5px solid rgba(0, 235, 255, 0.85) !important;
+    border-radius: 8px !important;
+    color: #33f3ff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 16px rgba(0, 235, 255, 0.45), inset 0 0 10px rgba(0, 235, 255, 0.25) !important;
+    backdrop-filter: blur(6px) !important;
+    padding: 6px 14px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transition: all 0.2s ease-in-out !important;
+    box-sizing: border-box !important;
+}
+
+div[data-testid="stDownloadButton"] button {
+    background: rgba(10, 30, 50, 0.65) !important;
+    border: 1.5px solid #00d8ff !important;
+    color: #00d8ff !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 0 16px rgba(0, 216, 255, 0.5), inset 0 0 10px rgba(0, 216, 255, 0.2) !important;
+    backdrop-filter: blur(6px) !important;
+    padding: 6px 14px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transition: all 0.2s ease-in-out !important;
+    box-sizing: border-box !important;
+}
+
+div[data-testid="stVideo"] { max-width: 320px !important; margin: 0 auto !important; }
+div[data-testid="stVideo"] video { max-height: 380px !important; object-fit: contain !important; width: 100% !important; }
+
+@media screen and (max-width: 768px) {
+    .main .block-container, [data-testid="stMainBlockContainer"] {
+        padding: 8px 6px 100px 6px !important;
+    }
+}
+</style>
+
+<div class="header-box">
+    <div>
+        <div class="brand-row">
+            <span class="yt-icon">▶</span>
+            <span class="title-white">YouTube</span>
+        </div>
+        <div class="title-row">
+            <span class="title-dark">Video</span>
+            <span class="title-red">Downloader</span>
+        </div>
+        <div class="subtitle-text">Save your favorite videos<br>anywhere, anywhere!</div>
+    </div>
+    <div class="top-right-container">
+        <div class="action-icons-row" style="gap: 10px;">
+            <form action="" method="get" style="margin: 0; display: inline-flex;">
+                <input type="hidden" name="page" value="home">
+                <button type="submit" class="icon-btn-style" title="Home / Reset" style="background: #090e1c; padding: 0; cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ffffff" viewBox="0 0 24 24"><path d="M12 3l10 9h-3v9h-6v-6h-2v6h-6v-9h-3z"/></svg>
+                </button>
+            </form>
+        </div>
+        <div class="graphic-link-container">
+            <a href="https://www.youtube.com" target="_blank" class="graphic-link" title="Open YouTube">
+                <div class="watch-on-yt-text">WATCH ON YOUtube</div>
+                <div class="graphic-glow">
+                    <div class="video-player-card">
+                        <div class="vp-screen"><span class="vp-play-icon">▶</span></div>
+                        <div class="vp-label">YouTube</div>
+                        <div class="dl-badge-card">↓</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+<div class="url-input-label"><span style="color: #ff001e;">▶</span> Youtube Link Paste</div>
+""",
+    unsafe_allow_html=True,
+)
+
+url = st.text_input(
+    "YouTube URL Link",
+    placeholder="🔗 Paste YouTube link here...",
+    label_visibility="collapsed",
+)
+
+# JavaScript observer: Forces React & Streamlit to rerun instantly on paste
+st.components.v1.html(
+    """
+    <script>
+    const parentDoc = window.parent.document;
+    
+    function attachInstantPasteListener() {
+        const input = parentDoc.querySelector('div[data-testid="stTextInput"] input');
+        if (input && !input.hasAttribute('data-instant-paste-listener')) {
+            input.setAttribute('data-instant-paste-listener', 'true');
+            
+            const forceStreamlitUpdate = () => {
+                const tracker = input._valueTracker;
+                if (tracker) {
+                    tracker.setValue('');
+                }
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.blur();
+            };
+
+            input.addEventListener('paste', () => {
+                setTimeout(forceStreamlitUpdate, 100);
+            });
+
+            input.addEventListener('input', () => {
+                if (input.value && input.value.trim().length > 5) {
+                    setTimeout(forceStreamlitUpdate, 250);
+                }
+            });
+        }
+    }
+    
+    setInterval(attachInstantPasteListener, 250);
+    </script>
+    """,
+    height=0,
+    width=0,
+)
+
+st.markdown(
+    '<div class="section-label"><span style="color: #ff001e;">▶</span> Choose Format :</div>',
+    unsafe_allow_html=True,
+)
+selected_format = st.radio(
+    "Choose Format",
+    ["MP4 (video)", "Mp3 (audio)", "MKV (video)", "WebM (video)"],
+    horizontal=True,
+    label_visibility="collapsed",
+)
+
+st.markdown(
+    '<div class="section-label"><span style="color: #ff001e;">▶</span> Select Quality :</div>',
+    unsafe_allow_html=True,
+)
+selected_quality = st.radio(
+    "Choose Quality",
+    ["144P", "240P", "360P", "480P", "720P", "1080P"],
+    index=5,
+    horizontal=True,
+    label_visibility="collapsed",
+)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Main Download Controller
+if not st.session_state.downloaded_file:
+  if url and url.strip() != "":
+    if not st.session_state.is_downloading and not st.session_state.show_ad:
+      if st.button(
+          "Download Now ↓",
+          key="main_download_btn",
+          type="primary",
+          use_container_width=True,
+      ):
+        st.session_state.show_ad = True
+        st.session_state.ad_timer = 25
+        st.rerun()
+
+  # Ad Countdown Display with Google AdSense code properly rendered via components.html
+  if st.session_state.show_ad:
+    ad_placeholder = st.empty()
+
+    while st.session_state.ad_timer > 0:
+      with ad_placeholder.container():
+        st.markdown(
+            f"""
+                    <div class="ad-box">
+                        <div class="ad-title">SPONSORED ADVERTISEMENT</div>
+                        <div class="ad-desc">Please wait while your download link is being prepared...</div>
+                    </div>
+                    """,
+            unsafe_allow_html=True,
+        )
+
+        # Render Google AdSense safely inside Streamlit component
+        st.components.v1.html(
+            """
+                    <div style="margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px dashed rgba(255,255,255,0.15); padding: 10px;">
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+                        <ins class="adsbygoogle"
+                             style="display:block; width:100%;"
+                             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                             data-ad-slot="1234567890"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        <script>
+                             (adsbygoogle = window.adsbygoogle || []).push({});
+                        </script>
+                    </div>
+                    """,
+            height=100,
+        )
+
+        st.markdown(
+            f"""
+                    <div class="ad-box" style="margin-top: 0; border-top: none; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 0;">
+                        <div class="ad-timer">{st.session_state.ad_timer}s</div>
+                        <div style="font-size: 10px; color: #838d9d; margin-top: 5px;">Advertisement is playing (non-skippable)</div>
+                    </div>
+                    """,
+            unsafe_allow_html=True,
+        )
+
+      time.sleep(1)
+      st.session_state.ad_timer -= 1
+
+    ad_placeholder.empty()
+    st.session_state.show_ad = False
+    st.session_state.is_downloading = True
+    st.session_state.progress_val = 1
     st.rerun()
 
+  if st.session_state.is_downloading:
+    progress_placeholder = st.empty()
 
-# --- 1. SPLASH SCREEN STAGE ---
-if not st.session_state["show_login"]:
+    try:
+      res = selected_quality.replace("P", "")
+
+      if "MP3" in selected_format.upper():
+        ydl_format = "bestaudio/best"
+        mime_type = "audio/mpeg"
+        target_ext = "mp3"
+      elif "MKV" in selected_format.upper():
+        ydl_format = "bestvideo+bestaudio/best"
+        mime_type = "video/x-matroska"
+        target_ext = "mkv"
+      elif "WEBM" in selected_format.upper():
+        ydl_format = "bestvideo[ext=webm]+bestaudio/best"
+        mime_type = "video/webm"
+        target_ext = "webm"
+      else:
+        ydl_format = (
+            "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+        )
+        mime_type = "video/mp4"
+        target_ext = "mp4"
+
+      quality_tag = (
+          "Audio" if "MP3" in selected_format.upper() else selected_quality
+      )
+      outtmpl_str = f"%(title)s_{quality_tag}.%(ext)s"
+
+      download_completed = [False]
+      download_error = [None]
+      download_result = [None]
+      extracted_info = [None]
+
+      target_url = url.strip()
+      if target_url.startswith("http://") or target_url.startswith("https://"):
+        if "youtube.com" not in target_url and "youtu.be" not in target_url:
+          ydl_format = "best/best"
+
+      ydl_opts = {
+          "format": ydl_format,
+          "outtmpl": outtmpl_str,
+          "quiet": True,
+          "noplaylist": True,
+      }
+
+      if "MP3" not in selected_format.upper() and (
+          "youtube.com" in target_url or "youtu.be" in target_url
+      ):
+        ydl_opts["format_sort"] = [f"res:{res}"]
+
+      if "MP3" in selected_format.upper():
+        ydl_opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+            "preferredquality": "192",
+        }]
+      else:
+        ydl_opts["merge_output_format"] = target_ext
+
+      def run_dl():
+        try:
+          with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(target_url, download=True)
+            extracted_info[0] = info
+            filename = ydl.prepare_filename(info)
+            base, _ = os.path.splitext(filename)
+            expected_file = f"{base}.{target_ext}"
+            if os.path.exists(expected_file):
+              filename = expected_file
+            download_result[0] = filename
+            download_completed[0] = True
+        except Exception as e:
+          download_error[0] = e
+          download_completed[0] = True
+
+      t = threading.Thread(target=run_dl)
+      t.start()
+
+      current_p = st.session_state.progress_val
+      if current_p < 1:
+        current_p = 1
+
+      while not download_completed[0]:
+        if current_p < 92:
+          current_p += 1
+          st.session_state.progress_val = current_p
+
+        deg = int((current_p / 100) * 360)
+        with progress_placeholder.container():
+          st.markdown(
+              f"""
+                    <div class="neon-loader-container">
+                        <div class="outer-orbit-ring">
+                            <div class="neon-ring" style="--deg: {deg}deg;">
+                                <div class="neon-ring-inner">
+                                    <div class="neon-center-video-box">
+                                        <div class="neon-inner-screen">
+                                            <div class="neon-play-arrow">▶</div>
+                                        </div>
+                                        <div class="neon-dot-badge"></div>
+                                    </div>
+                                    <div class="neon-percent-text">{current_p}%</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="loading-title">Downloading... ({current_p}%)</div>
+                        <div class="loading-subtitle">Please do not close the app</div>
+                    </div>
+                    """,
+              unsafe_allow_html=True,
+          )
+
+        time.sleep(0.08)
+
+      t.join()
+
+      if download_error[0]:
+        st.session_state.is_downloading = False
+        st.error(f"Dik lo a awm tlat: {download_error[0]}")
+      else:
+        while current_p < 100:
+          current_p += 1
+          st.session_state.progress_val = current_p
+          deg = int((current_p / 100) * 360)
+          with progress_placeholder.container():
+            st.markdown(
+                f"""
+                        <div class="neon-loader-container">
+                            <div class="outer-orbit-ring">
+                                <div class="neon-ring" style="--deg: {deg}deg;">
+                                    <div class="neon-ring-inner">
+                                        <div class="neon-center-video-box">
+                                            <div class="neon-inner-screen">
+                                                <div class="neon-play-arrow">▶</div>
+                                            </div>
+                                            <div class="neon-dot-badge"></div>
+                                        </div>
+                                        <div class="neon-percent-text">{current_p}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="loading-title">Finalizing...</div>
+                            <div class="loading-subtitle">Almost done, please wait</div>
+                        </div>
+                        """,
+                unsafe_allow_html=True,
+            )
+          time.sleep(0.06)
+
+        progress_placeholder.empty()
+
+        st.session_state.downloaded_file = download_result[0]
+        st.session_state.downloaded_mime = mime_type
+        st.session_state.is_audio = "MP3" in selected_format.upper()
+        st.session_state.is_downloading = False
+
+        # Add to recent downloads history
+        if extracted_info[0]:
+          vid_title = extracted_info[0].get("title", "YouTube Video")
+          file_path = download_result[0]
+          file_size_mb = 0.0
+          if os.path.exists(file_path):
+            file_size_mb = round(
+                os.path.getsize(file_path) / (1024 * 1024), 1
+            )
+
+          if "downloads" not in st.session_state:
+            st.session_state.downloads = []
+
+          st.session_state.downloads.insert(
+              0,
+              {
+                  "title": vid_title,
+                  "platform": "YouTube",
+                  "size": f"{file_size_mb} MB",
+                  "quality": selected_quality,
+                  "color": "#FF0000",
+                  "icon": "▶",
+                  "thumb": "",
+              },
+          )
+
+        st.rerun()
+
+    except Exception as e:
+      st.session_state.is_downloading = False
+      st.error(f"Dik lo a awm tlat: {e}")
+
+# Downloaded Media Preview Section
+if st.session_state.downloaded_file and os.path.exists(
+    st.session_state.downloaded_file
+):
   st.markdown(
-      f"""
-    <style>
-        .stApp {{
-            background: #06060e !important;
-            overflow: hidden !important;
-        }}
-        html, body, [data-testid="stAppViewContainer"], [data-testid="stMainBlockContainer"], .main, .block-container {{
-            background-color: #06060e !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            overflow: hidden !important;
-        }}
-        .main .block-container {{
-            padding: 0 !important;
-            max-width: 100% !important;
-            height: 100vh !important;
-            display: flex !important;
-            align-items: flex-start !important;
-            justify-content: center !important;
-            overflow: hidden !important;
-        }}
-        @keyframes fadeIn {{
-            from {{ opacity: 0; }}
-            to {{ opacity: 1; }}
-        }}
-        .splash-container {{
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            background: #06060e;
-            margin: 0;
-            padding: 0;
-            animation: fadeIn 3.0s ease-in-out;
-            overflow: hidden !important;
-        }}
-        .splash-logo-img {{
-            width: 100vw;
-            height: 100vh;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
-            margin-top: -5vh;
-            padding: 0;
-        }}
-        #MainMenu, footer, header {{visibility: hidden;}}
-    </style>
-
-    <div class="splash-container">
-        {"<img src='" + logo_b64 + "' class='splash-logo-img' />" if logo_b64 else ""}
-    </div>
-    """,
+      '<div class="section-label"><span style="color: #ff001e;">▶</span> Downloaded Media Preview :</div>',
       unsafe_allow_html=True,
   )
 
-  time.sleep(5.0)
-  st.session_state["show_login"] = True
-  st.session_state["login_page_loaded_time"] = time.time()
-  st.rerun()
+  if st.button(
+      "🔄 Download Another Video",
+      use_container_width=True,
+      key="download_another_btn",
+  ):
+    st.session_state.downloaded_file = None
+    st.rerun()
 
-else:
-  # --- 2. LOGIN PAGE / DASHBOARD STAGE ---
-  if not st.session_state["logged_in"]:
-    st.markdown(
-        """
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&display=swap');
-
-            html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMainBlockContainer"], .main, .block-container {
-                overflow: hidden !important;
-                height: 100vh !important;
-                max-height: 100vh !important;
-                background: #06060e !important;
-                color: white !important;
-            }
-            .main .block-container {
-                padding-top: 10px !important;
-                max-width: 440px;
-                margin: auto;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            #MainMenu, footer, header {visibility: hidden;}
-            .login-container {
-                margin-top: 140px;
-                text-align: center;
-                width: 100%;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            .login-title {
-                text-align: center;
-                margin-top: 12px;
-                margin-bottom: 15px;
-                font-size: 32px;
-                font-weight: bold;
-                background: linear-gradient(135deg, #ff007f, #ff8c00, #00f2fe, #a855f7);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-            }
-            @keyframes popUp {
-                0% { opacity: 0; transform: scale(0.8); }
-                100% { opacity: 1; transform: scale(1); }
-            }
-            .welcome-btn-wrapper {
-                animation: popUp 0.5s ease-out forwards;
-                width: 100%;
-            }
-            .stButton>button {
-                background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D, #F56040, #F77737, #FCAF45, #FFDC80, #1877F2) !important;
-                color: white !important;
-                border: none !important;
-                border-radius: 8px !important;
-                font-weight: bold !important;
-                transition: transform 0.2s;
-            }
-            .stButton>button:hover {
-                transform: scale(1.05);
-                color: white !important;
-            }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-
-    if theme_img_b64:
-      st.markdown(
-          f"<div style='text-align: center; margin-bottom: 0px;'><img"
-          f" src='{theme_img_b64}' style='width: 110px; height: auto;' /></div>",
-          unsafe_allow_html=True,
-      )
-
-    st.markdown(
-        '<div class="login-title">CoCo Media Tube</div>', unsafe_allow_html=True
-    )
-
-    delay_seconds = 2.0
-    elapsed_time = (
-        time.time() - st.session_state["login_page_loaded_time"]
-        if st.session_state["login_page_loaded_time"]
-        else 0
-    )
-
-    if elapsed_time < delay_seconds:
-      time.sleep(delay_seconds - elapsed_time)
-      st.rerun()
-    else:
-      col1, col2, col3 = st.columns([2.0, 4.0, 2.0])
-      with col2:
-        st.markdown('<div class="welcome-btn-wrapper">', unsafe_allow_html=True)
-        if st.button("Welcome", use_container_width=True, type="primary"):
-          st.session_state["logged_in"] = True
-          st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
+  if st.session_state.is_audio:
+    st.audio(st.session_state.downloaded_file)
   else:
-    # --- 3. MAIN DASHBOARD PAGE ---
-    st.markdown(
-        """
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@800;900&display=swap');
+    st.video(st.session_state.downloaded_file)
 
-        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMainBlockContainer"], .main, .block-container {
-            overflow: hidden !important;
-            height: 100vh !important;
-            max-height: 100vh !important;
-            position: fixed !important;
-            width: 100% !important;
-            touch-action: none !important;
-        }
-
-        .stApp {
-            background: #06060e;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .main .block-container {
-            padding-top: 0.4rem !important;
-            padding-bottom: 1rem !important;
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-            max-width: 440px;
-            margin: auto;
-        }
-        
-        .neon-header {
-            text-align: center;
-            padding: 2px 0 4px 0;
-            margin-bottom: 2px;
-        }
-        
-        .small-logo-img {
-            width: 55px;
-            height: auto;
-            border-radius: 12px;
-            margin-bottom: 2px;
-            filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.75));
-        }
-        
-        .logo-main-title {
-            font-size: 34px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            background: linear-gradient(135deg, #00f2fe, #4facfe, #a855f7, #f43f5e);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 15px rgba(168, 85, 247, 0.6);
-            margin: -4px 0;
-            line-height: 1;
-        }
-        
-        .logo-sub-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: 4px;
-            background: linear-gradient(90deg, #00ff87, #10b981, #047857);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 8px rgba(0, 255, 135, 0.8));
-            text-transform: uppercase;
-            margin-top: 2px;
-        }
-
-        .platform-container {
-            display: flex;
-            gap: 10px;
-            justify-content: space-between;
-            margin-top: 10px;
-            margin-bottom: 14px;
-        }
-        
-        .platform-card {
-            flex: 1;
-            height: 95px;
-            border-radius: 18px;
-            padding: 10px 4px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            text-align: center;
-            color: white !important;
-            text-decoration: none !important;
-            cursor: pointer;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .platform-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .yt-card { 
-            background: linear-gradient(145deg, #2b030a, #0d0205);
-            border: 1.5px solid #ff0044;
-            box-shadow: 0 0 14px rgba(255, 0, 68, 0.35);
-        }
-        .fb-card { 
-            background: linear-gradient(145deg, #031833, #020814);
-            border: 1.5px solid #0088ff;
-            box-shadow: 0 0 14px rgba(0, 136, 255, 0.35);
-        }
-        .ig-card { 
-            background: radial-gradient(circle at 30% 107%, rgba(253, 244, 151, 0.25) 0%, rgba(253, 89, 73, 0.25) 45%, rgba(214, 36, 159, 0.25) 60%, rgba(40, 90, 235, 0.25) 90%), linear-gradient(145deg, #2a032b, #0d020e);
-            border: 1.5px solid #d6249f;
-            box-shadow: 0 0 14px rgba(214, 36, 159, 0.5);
-        }
-
-        .card-title {
-            font-weight: 800;
-            font-size: 15px;
-            letter-spacing: 0.3px;
-        }
-
-        .stButton>button {
-            background: linear-gradient(90deg, #3b82f6, #ec4899, #f97316) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: bold !important;
-            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4) !important;
-            transition: transform 0.2s;
-        }
-        .stButton>button:hover {
-            transform: scale(1.05);
-            color: white !important;
-        }
-
-        #MainMenu, footer, header {visibility: hidden;}
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    theme_display = (
-        f"<img src='{theme_img_b64}' class='small-logo-img' />"
-        if theme_img_b64
-        else ""
-    )
-
-    st.markdown(
-        f"""
-    <div class='neon-header'>
-        {theme_display}
-        <div class='logo-main-title'>CoCo</div>
-        <div class='logo-sub-title'>MEDIA TUBE</div>
-    </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-    <div class='platform-container'>
-        <a href='?page=youtube' target='_self' class='platform-card yt-card'>
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="#FF0000">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <div class='card-title'>YouTube</div>
-        </a>
-        <a href='?page=facebook' target='_self' class='platform-card fb-card'>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="#1877F2">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            <div class='card-title'>Facebook</div>
-        </a>
-        <a href='?page=instagram' target='_self' class='platform-card ig-card'>
-            <svg width="32" height="32" viewBox="0 0 24 24">
-                <radialGradient id="rg" r="150%" cx="30%" cy="107%">
-                    <stop stop-color="#fdf497" offset="0%" />
-                    <stop stop-color="#fdf497" offset="5%" />
-                    <stop stop-color="#fd5949" offset="45%" />
-                    <stop stop-color="#d6249f" offset="60%" />
-                    <stop stop-color="#285AEB" offset="90%" />
-                </radialGradient>
-                <path fill="url(#rg)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-            </svg>
-            <div class='card-title'>Instagram</div>
-        </a>
-    </div>
-    """,
-        unsafe_allow_html=True,
+  with open(st.session_state.downloaded_file, "rb") as file:
+    st.download_button(
+        label="Save Folder",
+        data=file,
+        file_name=os.path.basename(st.session_state.downloaded_file),
+        mime=st.session_state.downloaded_mime,
+        use_container_width=True,
     )
