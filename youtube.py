@@ -572,7 +572,7 @@ if not st.session_state.downloaded_file:
       if "MP3" not in selected_format.upper() and (
           "youtube.com" in target_url or "youtu.be" in target_url
       ):
-        ydl_opts["format_sort"] = [f"res:{res}"]
+        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4:m4a"]
 
       if "MP3" in selected_format.upper():
         ydl_opts["postprocessors"] = [{
