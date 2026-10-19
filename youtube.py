@@ -543,7 +543,10 @@ if not st.session_state.downloaded_file:
       quality_tag = (
           "Audio" if "MP3" in selected_format.upper() else selected_quality
       )
-      outtmpl_str = f"%(title)s_{quality_tag}.%(ext)s"
+      
+      # Dynamic path hman tawh a ni (Current directory/folder a save turin)
+      base_dir = os.path.dirname(os.path.abspath(__file__))
+      outtmpl_str = os.path.join(base_dir, f"%(title)s_{quality_tag}.%(ext)s")
 
       download_completed = [False]
       download_error = [None]
@@ -560,7 +563,7 @@ if not st.session_state.downloaded_file:
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
-          "cookiefile": "cookies.txt",
+          "cookiefile": os.path.join(base_dir, "cookies.txt") if os.path.exists(os.path.join(base_dir, "cookies.txt")) else None,
           "extractor_args": {
               "youtube": {
                   "player_client": ["android", "mweb", "ios", "web"],
@@ -568,6 +571,10 @@ if not st.session_state.downloaded_file:
               }
           },
       }
+      
+      # Remove cookiefile key if it's None to avoid yt-dlp error
+      if ydl_opts["cookiefile"] is None:
+          del ydl_opts["cookiefile"]
 
       if "MP3" not in selected_format.upper() and (
           "youtube.com" in target_url or "youtu.be" in target_url
@@ -710,6 +717,7 @@ if not st.session_state.downloaded_file:
         st.rerun()
 
     except Exception as e:
+      st.session_state.is_dir = False
       st.session_state.is_downloading = False
       st.error(f"Dik lo a awm tlat: {e}")
 
@@ -735,7 +743,7 @@ if st.session_state.downloaded_file and os.path.exists(
   else:
     st.video(st.session_state.downloaded_file)
 
-  with open(st.session_state.downloaded_file, "rb") as file:
+  with open(st.session_state.download, "rb") if False else open(st.session_state.downloaded_file, "rb") as file:
     st.download_button(
         label="Save Folder",
         data=file,
