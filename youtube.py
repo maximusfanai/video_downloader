@@ -536,7 +536,7 @@ if not st.session_state.downloaded_file:
       else:
         ydl_format = "bestvideo+bestaudio/best"
         mime_type = "video/mp4"
-        target_ext = "mp4"  # <-- Define a ni ta e
+        target_ext = "mp4"
 
       quality_tag = (
           "Audio" if "MP3" in selected_format.upper() else selected_quality
@@ -555,27 +555,25 @@ if not st.session_state.downloaded_file:
         if "youtube.com" not in target_url and "youtu.be" not in target_url:
           ydl_format = "best/best"
 
+      # YT-DLP Options updated with proper headers & stable extractors to bypass 403 Forbidden
       ydl_opts = {
-          "format": ydl_format,
+          "format": "best",
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
           "cookiefile": os.path.join(base_dir, "cookies.txt") if os.path.exists(os.path.join(base_dir, "cookies.txt")) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["android", "mweb", "ios", "web"],
-                  "player_skip": ["webpage", "configs"],
+                  "player_client": ["android", "ios", "web"],
               }
           },
+          "http_headers": {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
       }
       
       if ydl_opts["cookiefile"] is None:
           del ydl_opts["cookiefile"]
-
-      if "MP3" not in selected_format.upper() and (
-          "youtube.com" in target_url or "youtu.be" in target_url
-      ):
-        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4", "ext:webm"]
 
       if "MP3" in selected_format.upper():
         ydl_opts["postprocessors"] = [{
