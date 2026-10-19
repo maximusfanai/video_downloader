@@ -442,8 +442,8 @@ st.markdown(
 )
 selected_quality = st.radio(
     "Choose Quality",
-    ["144P", "240P", "360P", "480P", "720P", "1080P"],
-    index=5,
+    ["Best Quality", "HD", "SD"],
+    index=0,
     horizontal=True,
     label_visibility="collapsed",
 )
@@ -519,15 +519,18 @@ if not st.session_state.downloaded_file:
     progress_placeholder = st.empty()
 
     try:
-      res = selected_quality.replace("P", "")
-
       if "MP3" in selected_format.upper():
         ydl_format = "bestaudio/best"
         mime_type = "audio/mpeg"
         target_ext = "mp3"
       else:
-        # Flexible video format matching user's quality & format selection
-        ydl_format = f"bestvideo[height<={res}]+bestaudio/best[height<={res}]/best"
+        if "SD" in selected_quality.upper():
+          ydl_format = "bestvideo[height<=480]+bestaudio/best[height<=480]/best"
+        elif "HD" in selected_quality.upper():
+          ydl_format = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+        else:
+          ydl_format = "bestvideo+bestaudio/best"
+
         if "MKV" in selected_format.upper():
           mime_type = "video/x-matroska"
           target_ext = "mkv"
@@ -551,6 +554,11 @@ if not st.session_state.downloaded_file:
       extracted_info = [None]
 
       target_url = url.strip()
+      if "&list=" in target_url:
+        target_url = target_url.split("&list=")[0]
+      elif "?list=" in target_url:
+        target_url = target_url.split("?list=")[0]
+
       if target_url.startswith("http://") or target_url.startswith("https://"):
         if "youtube.com" not in target_url and "youtu.be" not in target_url:
           ydl_format = "best/best"
@@ -573,11 +581,6 @@ if not st.session_state.downloaded_file:
       
       if ydl_opts["cookiefile"] is None:
           del ydl_opts["cookiefile"]
-
-      if "MP3" not in selected_format.upper() and (
-          "youtube.com" in target_url or "youtu.be" in target_url
-      ):
-        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4", "ext:webm"]
 
       if "MP3" in selected_format.upper():
         ydl_opts["postprocessors"] = [{
