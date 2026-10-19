@@ -534,8 +534,9 @@ if not st.session_state.downloaded_file:
         mime_type = "video/webm"
         target_ext = "webm"
       else:
-        # Flexible video format matching to prevent format-not-available errors
         ydl_format = "bestvideo+bestaudio/best"
+        mime_type = "video/mp4"
+        target_ext = "mp4"  # <-- Define a ni ta e
 
       quality_tag = (
           "Audio" if "MP3" in selected_format.upper() else selected_quality
@@ -574,7 +575,6 @@ if not st.session_state.downloaded_file:
       if "MP3" not in selected_format.upper() and (
           "youtube.com" in target_url or "youtu.be" in target_url
       ):
-        # Fallback sort order so it picks the closest available quality gracefully
         ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4", "ext:webm"]
 
       if "MP3" in selected_format.upper():
