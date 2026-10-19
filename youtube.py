@@ -555,7 +555,7 @@ if not st.session_state.downloaded_file:
         if "youtube.com" not in target_url and "youtu.be" not in target_url:
           ydl_format = "best/best"
 
-      # YT-DLP Options updated with proper headers & stable extractors to bypass 403 Forbidden
+      # Updated yt_dlp options with robust extractor clients to prevent 403 Forbidden & bot detection errors
       ydl_opts = {
           "format": "best",
           "outtmpl": outtmpl_str,
@@ -564,11 +564,11 @@ if not st.session_state.downloaded_file:
           "cookiefile": os.path.join(base_dir, "cookies.txt") if os.path.exists(os.path.join(base_dir, "cookies.txt")) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["android", "ios", "web"],
+                  "player_client": ["android", "web"],
               }
           },
           "http_headers": {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
           }
       }
       
