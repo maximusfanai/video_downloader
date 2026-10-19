@@ -600,11 +600,11 @@ if not st.session_state.downloaded_file:
           "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["android", "web"],
+                  "player_client": ["mweb", "ios"],
               }
           },
           "http_headers": {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+              "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
           }
       }
       
