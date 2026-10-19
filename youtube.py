@@ -3,6 +3,7 @@ import threading
 import time
 import static_ffmpeg
 import streamlit as st
+import streamlit.components.v1 as components
 import yt_dlp
 
 try:
@@ -101,18 +102,15 @@ div[data-testid="stRadio"] > div {
 }
 
 div[data-testid="stRadio"] div[role="radiogroup"] { 
-    display: flex !important; 
-    flex-direction: row !important;
-    flex-wrap: nowrap !important; 
-    gap: 7px !important; 
+    display: grid !important; 
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important; 
     width: 100% !important; 
-    justify-content: space-between !important;
-    align-items: stretch !important;
 }
 
 div[data-testid="stRadio"] div[role="radiogroup"] > div {
-    flex: 1 1 0% !important; 
     width: 100% !important;
+    min-width: 0 !important;
 }
 
 div[data-testid="stRadio"] div[role="radiogroup"] label {
@@ -127,8 +125,8 @@ div[data-testid="stRadio"] div[role="radiogroup"] label {
     flex-direction: row !important; 
     align-items: center !important; 
     justify-content: center !important;
-    flex: 1 1 0% !important; 
     width: 100% !important; 
+    min-width: 0 !important;
     margin: 0 !important;
     box-sizing: border-box !important;
     transition: all 0.2s ease !important;
@@ -144,8 +142,17 @@ div[data-testid="stRadio"] label > div:first-child {
     display: none !important; 
 }
 
+div[data-testid="stRadio"] label > div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 div[data-testid="stRadio"] div[role="radiogroup"] label p { 
-    font-size: 10px !important; 
+    font-size: 11px !important; 
     font-weight: 600 !important; 
     color: #ffffff !important; 
     text-align: center !important; 
@@ -153,6 +160,9 @@ div[data-testid="stRadio"] div[role="radiogroup"] label p {
     padding: 0 !important;
     line-height: 1 !important; 
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    width: 100% !important;
 }
 
 div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p {
@@ -384,7 +394,7 @@ url = st.text_input(
     label_visibility="collapsed",
 )
 
-st.components.v1.html(
+components.html(
     """
     <script>
     const parentDoc = window.parent.document;
@@ -409,7 +419,7 @@ st.components.v1.html(
             });
 
             input.addEventListener('input', () => {
-                if (input.value && input.value.trim().length > 5) {
+                if (input.value && input.value.trim().length > 3) {
                     setTimeout(forceStreamlitUpdate, 250);
                 }
             });
@@ -442,8 +452,8 @@ st.markdown(
 )
 selected_quality = st.radio(
     "Choose Quality",
-    ["Best Quality", "HD", "SD"],
-    index=0,
+    ["Data Saver", "SD", "HD", "Best Quality"],
+    index=3,
     horizontal=True,
     label_visibility="collapsed",
 )
@@ -519,49 +529,58 @@ if not st.session_state.downloaded_file:
     progress_placeholder = st.empty()
 
     try:
-      if "MP3" in selected_format.upper():
-        ydl_format = "bestaudio/best"
-        mime_type = "audio/mpeg"
-        target_ext = "mp3"
-      else:
-        if "SD" in selected_quality.upper():
-          ydl_format = "bestvideo[height<=480]+bestaudio/best[height<=480]/best"
-        elif "HD" in selected_quality.upper():
-          ydl_format = "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
-        else:
-          ydl_format = "bestvideo+bestaudio/best"
-
-        if "MKV" in selected_format.upper():
-          mime_type = "video/x-matroska"
-          target_ext = "mkv"
-        elif "WEBM" in selected_format.upper():
-          mime_type = "video/webm"
-          target_ext = "webm"
-        else:
-          mime_type = "video/mp4"
-          target_ext = "mp4"
-
-      quality_tag = (
-          "Audio" if "MP3" in selected_format.upper() else selected_quality
-      )
-      
-      base_dir = os.path.dirname(os.path.abspath(__file__))
-      outtmpl_str = os.path.join(base_dir, f"%(title)s_{quality_tag}.%(ext)s")
-
-      download_completed = [False]
-      download_error = [None]
-      download_result = [None]
-      extracted_info = [None]
-
       target_url = url.strip()
       if "&list=" in target_url:
         target_url = target_url.split("&list=")[0]
       elif "?list=" in target_url:
         target_url = target_url.split("?list=")[0]
 
-      if target_url.startswith("http://") or target_url.startswith("https://"):
-        if "youtube.com" not in target_url and "youtu.be" not in target_url:
+      fmt_upper = selected_format.upper()
+      qual_upper = selected_quality.upper()
+
+      is_direct_link = target_url.startswith("http://") or target_url.startswith("https://")
+      is_yt_link = "youtube.com" in target_url or "youtu.be" in target_url or "shorts" in target_url
+
+      if "MP3" in fmt_upper:
+        ydl_format = "bestaudio/best"
+        mime_type = "audio/mpeg"
+        target_ext = "mp3"
+      else:
+        if is_direct_link and not is_yt_link:
           ydl_format = "best/best"
+          target_ext = os.path.splitext(target_url.split("?")[0])[1].replace(".", "")
+          if not target_ext or len(target_ext) > 5:
+            target_ext = "mp4"
+          mime_type = f"video/{target_ext}" if target_ext in ["mp4", "webm", "mkv"] else "video/mp4"
+        else:
+          if "DATA SAVER" in qual_upper:
+            ydl_format = "best[height<=360]/best/worst"
+          elif "SD" in qual_upper:
+            ydl_format = "best[height<=480]/best[height<=360]/best"
+          elif "HD" in qual_upper:
+            ydl_format = "best[height<=720]/best[height<=480]/best"
+          else:
+            ydl_format = "best/bestvideo+bestaudio/best"
+
+          if "MKV" in fmt_upper:
+            mime_type = "video/x-matroska"
+            target_ext = "mkv"
+          elif "WEBM" in fmt_upper:
+            mime_type = "video/webm"
+            target_ext = "webm"
+          else:
+            mime_type = "video/mp4"
+            target_ext = "mp4"
+
+      quality_tag = "Audio" if "MP3" in fmt_upper else selected_quality
+      
+      base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+      outtmpl_str = os.path.join(base_dir, f"%(title)s_{quality_tag}.%(ext)s")
+
+      download_completed = [False]
+      download_error = [None]
+      download_result = [None]
+      extracted_info = [None]
 
       ydl_opts = {
           "format": ydl_format,
@@ -579,10 +598,10 @@ if not st.session_state.downloaded_file:
           }
       }
       
-      if ydl_opts["cookiefile"] is None:
+      if ydl_opts.get("cookiefile") is None:
           del ydl_opts["cookiefile"]
 
-      if "MP3" in selected_format.upper():
+      if "MP3" in fmt_upper:
         ydl_opts["postprocessors"] = [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
@@ -590,7 +609,18 @@ if not st.session_state.downloaded_file:
         }]
       else:
         ydl_opts["merge_output_format"] = target_ext
-
+        if "MKV" in fmt_upper:
+          ydl_opts["postprocessor_args"] = {
+              "Merger": ["-c:v", "copy", "-c:a", "aac", "-ac", "2"]
+          }
+        elif "WEBM" in fmt_upper:
+          ydl_opts["postprocessor_args"] = {
+              "Merger": ["-c:v", "copy", "-c:a", "opus"]
+          }
+        else:
+          ydl_opts["postprocessor_args"] = {
+              "Merger": ["-c:v", "copy", "-c:a", "aac", "-ac", "2"]
+          }
 
       def run_dl():
         try:
@@ -687,7 +717,7 @@ if not st.session_state.downloaded_file:
 
         st.session_state.downloaded_file = download_result[0]
         st.session_state.downloaded_mime = mime_type
-        st.session_state.is_audio = "MP3" in selected_format.upper()
+        st.session_state.is_audio = "MP3" in fmt_upper
         st.session_state.is_downloading = False
 
         if extracted_info[0]:
@@ -706,7 +736,7 @@ if not st.session_state.downloaded_file:
               0,
               {
                   "title": vid_title,
-                  "platform": "YouTube",
+                  "platform": "YouTube/Web",
                   "size": f"{file_size_mb} MB",
                   "quality": selected_quality,
                   "color": "#FF0000",
