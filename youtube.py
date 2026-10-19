@@ -586,19 +586,25 @@ if not st.session_state.downloaded_file:
       download_result = [None]
       extracted_info = [None]
 
+      base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+      cookies_path = os.path.join(base_dir, "cookies.txt")
+      if not os.path.exists(cookies_path):
+          current_file_dir = os.path.dirname(os.path.abspath(__file__))
+          cookies_path = os.path.join(current_file_dir, "cookies.txt")
+
       ydl_opts = {
           "format": ydl_format,
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
-          "cookiefile": os.path.join(base_dir, "cookies.txt") if os.path.exists(os.path.join(base_dir, "cookies.txt")) else None,
+          "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["ios"],
+                  "player_client": ["android", "web"],
               }
           },
           "http_headers": {
-              "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           }
       }
       
