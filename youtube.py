@@ -540,6 +540,7 @@ if not st.session_state.downloaded_file:
 
       is_direct_link = target_url.startswith("http://") or target_url.startswith("https://")
       is_yt_link = "youtube.com" in target_url or "youtu.be" in target_url or "shorts" in target_url
+      is_shorts = "shorts" in target_url
 
       if "MP3" in fmt_upper:
         ydl_format = "bestaudio/best"
@@ -553,14 +554,17 @@ if not st.session_state.downloaded_file:
             target_ext = "mp4"
           mime_type = f"video/{target_ext}" if target_ext in ["mp4", "webm", "mkv"] else "video/mp4"
         else:
-          if "DATA SAVER" in qual_upper:
-            ydl_format = "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]/worst"
-          elif "SD" in qual_upper:
-            ydl_format = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]/best"
-          elif "HD" in qual_upper:
-            ydl_format = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best"
+          if is_shorts:
+            ydl_format = "best/best"
           else:
-            ydl_format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+            if "DATA SAVER" in qual_upper:
+              ydl_format = "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]/worst"
+            elif "SD" in qual_upper:
+              ydl_format = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]/best"
+            elif "HD" in qual_upper:
+              ydl_format = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best"
+            else:
+              ydl_format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
 
           if "MKV" in fmt_upper:
             mime_type = "video/x-matroska"
