@@ -554,13 +554,13 @@ if not st.session_state.downloaded_file:
           mime_type = f"video/{target_ext}" if target_ext in ["mp4", "webm", "mkv"] else "video/mp4"
         else:
           if "DATA SAVER" in qual_upper:
-            ydl_format = "best[height<=360]/best/worst"
+            ydl_format = "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]/worst"
           elif "SD" in qual_upper:
-            ydl_format = "best[height<=480]/best[height<=360]/best"
+            ydl_format = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]/best"
           elif "HD" in qual_upper:
-            ydl_format = "best[height<=720]/best[height<=480]/best"
+            ydl_format = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best"
           else:
-            ydl_format = "best/bestvideo+bestaudio/best"
+            ydl_format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
 
           if "MKV" in fmt_upper:
             mime_type = "video/x-matroska"
@@ -778,6 +778,6 @@ if st.session_state.downloaded_file and os.path.exists(
         label="Save Folder",
         data=file,
         file_name=os.path.basename(st.session_state.downloaded_file),
-        mime=st.session_state.downloaded_mime,
+        mime=st.session_state.download_mime,
         use_container_width=True,
     )
