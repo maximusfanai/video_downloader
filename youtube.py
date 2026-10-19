@@ -525,18 +525,18 @@ if not st.session_state.downloaded_file:
         ydl_format = "bestaudio/best"
         mime_type = "audio/mpeg"
         target_ext = "mp3"
-      elif "MKV" in selected_format.upper():
-        ydl_format = "bestvideo+bestaudio/best"
-        mime_type = "video/x-matroska"
-        target_ext = "mkv"
-      elif "WEBM" in selected_format.upper():
-        ydl_format = "bestvideo+bestaudio/best"
-        mime_type = "video/webm"
-        target_ext = "webm"
       else:
-        ydl_format = "bestvideo+bestaudio/best"
-        mime_type = "video/mp4"
-        target_ext = "mp4"
+        # Flexible video format matching user's quality & format selection
+        ydl_format = f"bestvideo[height<={res}]+bestaudio/best[height<={res}]/best"
+        if "MKV" in selected_format.upper():
+          mime_type = "video/x-matroska"
+          target_ext = "mkv"
+        elif "WEBM" in selected_format.upper():
+          mime_type = "video/webm"
+          target_ext = "webm"
+        else:
+          mime_type = "video/mp4"
+          target_ext = "mp4"
 
       quality_tag = (
           "Audio" if "MP3" in selected_format.upper() else selected_quality
@@ -555,9 +555,8 @@ if not st.session_state.downloaded_file:
         if "youtube.com" not in target_url and "youtu.be" not in target_url:
           ydl_format = "best/best"
 
-      # Updated yt_dlp options with robust extractor clients to prevent 403 Forbidden & bot detection errors
       ydl_opts = {
-          "format": "best",
+          "format": ydl_format,
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
@@ -574,6 +573,11 @@ if not st.session_state.downloaded_file:
       
       if ydl_opts["cookiefile"] is None:
           del ydl_opts["cookiefile"]
+
+      if "MP3" not in selected_format.upper() and (
+          "youtube.com" in target_url or "youtu.be" in target_url
+      ):
+        ydl_opts["format_sort"] = [f"res:{res}", "ext:mp4", "ext:webm"]
 
       if "MP3" in selected_format.upper():
         ydl_opts["postprocessors"] = [{
