@@ -600,11 +600,11 @@ if not st.session_state.downloaded_file:
           "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["mweb", "ios"],
+                  "player_client": ["android", "web"],
               }
           },
           "http_headers": {
-              "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           }
       }
       
@@ -788,6 +788,6 @@ if st.session_state.downloaded_file and os.path.exists(
         label="Save Folder",
         data=file,
         file_name=os.path.basename(st.session_state.downloaded_file),
-        mime=st.session_state.download_mime,
+        mime=st.session_state.downloaded_mime,
         use_container_width=True,
     )
