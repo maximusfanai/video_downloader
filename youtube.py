@@ -600,7 +600,7 @@ if not st.session_state.downloaded_file:
           "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["android", "web"],
+                  "player_client": ["mweb", "ios", "web"],
               }
           },
           "http_headers": {
