@@ -555,16 +555,16 @@ if not st.session_state.downloaded_file:
           mime_type = f"video/{target_ext}" if target_ext in ["mp4", "webm", "mkv"] else "video/mp4"
         else:
           if is_shorts:
-            ydl_format = "bv*+ba/b"
+            ydl_format = "best/best"
           else:
             if "DATA SAVER" in qual_upper:
-              ydl_format = "bv*[height<=360]+ba/b[height<=360]/b"
+              ydl_format = "best[height<=360]/best"
             elif "SD" in qual_upper:
-              ydl_format = "bv*[height<=480]+ba/b[height<=480]/b"
+              ydl_format = "best[height<=480]/best"
             elif "HD" in qual_upper:
-              ydl_format = "bv*[height<=720]+ba/b[height<=720]/b"
+              ydl_format = "best[height<=720]/best"
             else:
-              ydl_format = "bv*+ba/b"
+              ydl_format = "best/best"
 
           if "MKV" in fmt_upper:
             mime_type = "video/x-matroska"
