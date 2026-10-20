@@ -558,13 +558,13 @@ if not st.session_state.downloaded_file:
             ydl_format = "best/best"
           else:
             if "DATA SAVER" in qual_upper:
-              ydl_format = "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360]/worst"
+              ydl_format = "best[height<=360]/bestvideo[height<=360]+bestaudio/best"
             elif "SD" in qual_upper:
-              ydl_format = "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]/best"
+              ydl_format = "best[height<=480]/bestvideo[height<=480]+bestaudio/best"
             elif "HD" in qual_upper:
-              ydl_format = "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best"
+              ydl_format = "best[height<=720]/bestvideo[height<=720]+bestaudio/best"
             else:
-              ydl_format = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+              ydl_format = "best/bestvideo+bestaudio/best"
 
           if "MKV" in fmt_upper:
             mime_type = "video/x-matroska"
