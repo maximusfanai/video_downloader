@@ -554,17 +554,14 @@ if not st.session_state.downloaded_file:
             target_ext = "mp4"
           mime_type = f"video/{target_ext}" if target_ext in ["mp4", "webm", "mkv"] else "video/mp4"
         else:
-          if is_shorts:
-            ydl_format = "best/best"
+          if "DATA SAVER" in qual_upper:
+            ydl_format = "best[height<=360]/best"
+          elif "SD" in qual_upper:
+            ydl_format = "best[height<=480]/best"
+          elif "HD" in qual_upper:
+            ydl_format = "best[height<=720]/best"
           else:
-            if "DATA SAVER" in qual_upper:
-              ydl_format = "best[height<=360]/best"
-            elif "SD" in qual_upper:
-              ydl_format = "best[height<=480]/best"
-            elif "HD" in qual_upper:
-              ydl_format = "best[height<=720]/best"
-            else:
-              ydl_format = "best/best"
+            ydl_format = "best/best"
 
           if "MKV" in fmt_upper:
             mime_type = "video/x-matroska"
@@ -600,7 +597,7 @@ if not st.session_state.downloaded_file:
           "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
           "extractor_args": {
               "youtube": {
-                  "player_client": ["mweb", "web"],
+                  "player_client": ["android", "web"],
               }
           },
           "http_headers": {
