@@ -6,6 +6,22 @@ import streamlit as st
 import streamlit.components.v1 as components
 import yt_dlp
 
+# YouTube cookies (optional). Keep cookie text in Streamlit Secrets,
+# not in a public repository.
+COOKIE_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "youtube_cookies.txt",
+)
+
+try:
+    cookies_secret = st.secrets.get("YOUTUBE_COOKIES", "")
+except Exception:
+    cookies_secret = ""
+
+if isinstance(cookies_secret, str) and cookies_secret.strip():
+    with open(COOKIE_FILE, "w", encoding="utf-8", newline="") as cookie_file:
+        cookie_file.write(cookies_secret.strip() + "\n")
+
 try:
   static_ffmpeg.add_paths()
 except Exception:
@@ -583,30 +599,23 @@ if not st.session_state.downloaded_file:
       download_result = [None]
       extracted_info = [None]
 
-      base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-      cookies_path = os.path.join(base_dir, "cookies.txt")
-      if not os.path.exists(cookies_path):
-          current_file_dir = os.path.dirname(os.path.abspath(__file__))
-          cookies_path = os.path.join(current_file_dir, "cookies.txt")
+      cookies_file_path = COOKIE_FILE if os.path.isfile(COOKIE_FILE) else None
 
+      # Use yt-dlp's default YouTube client selection and headers.
+      # Hard-coded player_client lists / browser headers can become stale.
       ydl_opts = {
           "format": ydl_format,
           "outtmpl": outtmpl_str,
           "quiet": True,
           "noplaylist": True,
-          "cookiefile": cookies_path if os.path.exists(cookies_path) else None,
-          "extractor_args": {
-              "youtube": {
-                  "player_client": ["android"],
-              }
-          },
-          "http_headers": {
-              "User-Agent": "com.google.android.youtube/19.09.37 (Linux; U; Android 11; en_US; Redmi K20 Pro) Build/RKQ1.200826.002"
-          }
+          "retries": 3,
+          "fragment_retries": 3,
+          "socket_timeout": 30,
       }
-      
-      if ydl_opts.get("cookiefile") is None:
-          del ydl_opts["cookiefile"]
+
+      # Cookies are optional and must be valid Netscape-format cookies.
+      if cookies_file_path:
+          ydl_opts["cookiefile"] = cookies_file_path
 
       if "MP3" in fmt_upper:
         ydl_opts["postprocessors"] = [{
@@ -644,7 +653,6 @@ if not st.session_state.downloaded_file:
         except Exception as e:
           download_error[0] = e
           download_completed[0] = True
-
 
       t = threading.Thread(target=run_dl)
       t.start()
@@ -689,7 +697,23 @@ if not st.session_state.downloaded_file:
 
       if download_error[0]:
         st.session_state.is_downloading = False
-        st.error(f"Dik lo a awm tlat: {download_error[0]}")
+        error_text = str(download_error[0])
+        error_lower = error_text.lower()
+
+        if "sign in to confirm you're not a bot" in error_lower or "confirm you’re not a bot" in error_lower:
+          st.error(
+              "YouTube-in Streamlit Cloud server hi bot-check avangin a block a. "
+              "Streamlit Secrets-a YOUTUBE_COOKIES chu valid leh fresh a nih ngei en rawh. "
+              "Cookies dik hman pawhin cloud server IP avangin a fail thei; code thlakna chauh "
+              "in a tihdam theih tih guarantee a awm lo."
+          )
+        elif "private video" in error_lower or "sign in" in error_lower:
+          st.error(
+              "He video hi private/age-restricted a nih thei, emaw YouTube authentication a ngai. "
+              "Video i access phalna nei leh cookies dik i hman ngei en rawh."
+          )
+        else:
+          st.error(f"Dik lo a awm tlat: {error_text}")
       else:
         while current_p < 100:
           current_p += 1
